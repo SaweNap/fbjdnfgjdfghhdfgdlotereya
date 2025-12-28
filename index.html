@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>3D лотерея - выигрышная комбинация</title>
+<style>
+  /* Общие стили без изменений */
+  body {
+    background-image: url('https://raw.githubusercontent.com/SaweNap/fbjdnfgjdfghhdfgdlotereya/refs/heads/main/fon.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    margin: 0;
+    min-height: 100vh;
+    color: #fff;
+  }
+  h1 {
+    margin-bottom: 15px;
+    font-size: 28px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+  #inputContainer {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  #betInput {
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: box-shadow 0.3s;
+  }
+  #betInput:focus {
+    box-shadow: 0 0 12px #66ccff;
+  }
+  /* Обновленные стили кнопок кровавого цвета */
+  #startBtn {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #8B0000, #B22222); /* кровавый градиент */
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+  }
+  #startBtn:hover {
+    background: linear-gradient(135deg, #A52A2A, #FF0000); /* яркий кровавый при наведении */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  }
+  #gameContainer {
+    margin-top: 30px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+  }
+  #numbersDisplay {
+    font-size: 28px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+  }
+  #cardsArea {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    perspective: 1500px;
+  }
+  .card {
+    width: 80px;
+    height: 120px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(.25,.8,.25,1), box-shadow 0.3s, transform-origin 0.3s;
+    cursor: pointer;
+  }
+  .card:hover {
+    box-shadow: 0 12px 20px rgba(0,0,0,0.4);
+    transform: translateY(-4px);
+  }
+  .card.flipped {
+    transform: rotateY(180deg);
+  }
+  .card.selected {
+    box-shadow: 0 0 15px 4px #ffeb3b, 0 8px 16px rgba(0,0,0,0.4);
+  }
+  .front, .back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    user-select: none;
+  }
+  .front {
+    background: #fff;
+    color: #333;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+  }
+  .back {
+    background: #333;
+    color: #fff;
+    transform: rotateY(180deg);
+  }
+  #result {
+    margin-top: 25px;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  }
+  #rewardMsg {
+    margin-top: 15px;
+    font-size: 20px;
+    color: #ffeb3b;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+  }
+  /* Обновленные стили кнопки "Сыграть еще раз" кровавого цвета */
+  #playAgainBtn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #8B0000, #B22222); /* кровавый градиент */
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+  }
+  #playAgainBtn:hover {
+    background: linear-gradient(135deg, #A52A2A, #FF0000); /* яркий кровавый при наведении */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<div id="inputContainer">
+  <input type="number" id="betInput" placeholder="Введите ставку" />
+  <button id="startBtn">Старт</button>
+</div>
+
+<div id="gameContainer">
+  <div id="numbersDisplay">0</div>
+  <div id="cardsArea"></div>
+  <div id="result"></div>
+  <div id="rewardMsg"></div>
+</div>
+
+<script>
+const startBtn = document.getElementById('startBtn');
+const betInput = document.getElementById('betInput');
+const gameContainer = document.getElementById('gameContainer');
+const numbersDisplay = document.getElementById('numbersDisplay');
+const cardsArea = document.getElementById('cardsArea');
+const resultDiv = document.getElementById('result');
+const rewardDiv = document.getElementById('rewardMsg');
+
+let winningNumber = '0';
+const totalCards = 15;
+let cardNumbers = [];
+let selectedCards = [];
+let isOpening = false;
+let gameInProgress = false;
+let showWinningNumber = false;
+
+let hasPlayedOpenSound = false;
+
+// Звуки
+const openSound = new Audio('https://raw.githubusercontent.com/SaweNap/fbjdnfgjdfghhdfgdlotereya/main/234242.mp3');
+const selectSound = new Audio('https://github.com/SaweNap/fbjdnfgjdfghhdfgdlotereya/raw/main/najatia.mp3');
+const keySound = new Audio('https://github.com/SaweNap/fbjdnfgjdfghhdfgdlotereya/raw/main/klavisha.mp3');
+
+let soundReady = false;
+
+// Инициализация звука при первом клике
+function initSound() {
+  if (soundReady) return;
+  openSound.play().then(() => {
+    openSound.pause();
+    openSound.currentTime = 0;
+    selectSound.play().then(() => {
+      selectSound.pause();
+      selectSound.currentTime = 0;
+    }).catch(() => {
+      console.log('Не удалось подготовить звук выбора.');
+    });
+    keySound.play().then(() => {
+      keySound.pause();
+      keySound.currentTime = 0;
+      soundReady = true;
+    }).catch(() => {
+      console.log('Не удалось подготовить звуковой ключ.');
+    });
+  }).catch(() => {
+    console.log('Не удалось подготовить звук открытия.');
+  });
+}
+document.addEventListener('click', initSound, {once: true});
+
+// Кнопка старт
+startBtn.onclick = () => {
+  if (gameInProgress) return;
+  startBtn.disabled = true; // блокируем кнопку
+  const bet = parseFloat(betInput.value);
+  if (isNaN(bet) || bet <= 0) {
+    alert('Введите корректную ставку!');
+    startBtn.disabled = false; // разблокируем, если ошибка
+    return;
+  }
+  gameInProgress = true;
+  showWinningNumber = true;
+  initGame();
+  if (soundReady) {
+    keySound.currentTime = 0;
+    keySound.play();
+  }
+};
+
+function initGame() {
+  // Убираем кнопку "играем еще раз" если есть
+  const oldBtn = document.getElementById('playAgainBtn');
+  if (oldBtn) oldBtn.remove();
+
+  resultDiv.innerHTML = '';
+  rewardDiv.innerHTML = '';
+  selectedCards = [];
+  isOpening = false;
+
+  const digits = [];
+  for (let i=0; i<4; i++) {
+    digits.push(Math.floor(Math.random()*10));
+  }
+  winningNumber = digits.join('');
+  if (showWinningNumber) {
+    numbersDisplay.innerHTML = `Выигрышная комбинация: ${digits.join('')}`;
+  } else {
+    numbersDisplay.innerHTML = '0';
+  }
+
+  cardNumbers = [];
+  for (let i=0; i<totalCards; i++) {
+    cardNumbers.push(Math.floor(Math.random()*10));
+  }
+  renderCards();
+
+  document.getElementById('gameContainer').style.display = 'flex';
+
+  // Разблокируем кнопку после инициализации
+  startBtn.disabled = false;
+}
+
+// Предотвращение прокрутки
+window.addEventListener('wheel', e => {
+  if (e.ctrlKey || e.metaKey) e.preventDefault();
+}, {passive: false});
+document.body.style.overflow = 'hidden';
+
+function renderCards() {
+  cardsArea.innerHTML = '';
+  for (let i=0; i<totalCards; i++) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.index = i;
+
+    const front = document.createElement('div');
+    front.className = 'front';
+    front.textContent = '?';
+
+    const back = document.createElement('div');
+    back.className = 'back';
+    back.textContent = cardNumbers[i];
+
+    card.appendChild(front);
+    card.appendChild(back);
+
+    card.addEventListener('click', () => {
+      if (isOpening || !gameInProgress || !showWinningNumber) return;
+      if (selectedCards.length >= 4) return;
+      if (selectedCards.includes(card)) return;
+      selectedCards.push(card);
+      card.classList.add('selected');
+
+      // Воспроизведение звука при выборе
+      if (soundReady) {
+        selectSound.currentTime = 0;
+        selectSound.play();
+      }
+
+      if (selectedCards.length === 4) {
+        openSelectedCards();
+      }
+    });
+
+    cardsArea.appendChild(card);
+  }
+}
+
+function openSelectedCards() {
+  if (!hasPlayedOpenSound) {
+    if (soundReady) {
+      openSound.currentTime = 0;
+      openSound.play();
+    }
+    hasPlayedOpenSound = true;
+  }
+
+  isOpening = true;
+  let index = 0;
+  function openNext() {
+    if (index >= selectedCards.length) {
+      setTimeout(checkWin, 500);
+      isOpening = false;
+      return;
+    }
+    const card = selectedCards[index];
+
+    if (soundReady) {
+      openSound.currentTime = 0;
+      openSound.play();
+    }
+
+    card.classList.add('flipped');
+    index++;
+    setTimeout(openNext, 700);
+  }
+  openNext();
+}
+
+function checkWin() {
+  const openedDigits = [];
+  document.querySelectorAll('.card').forEach(c => {
+    if (c.classList.contains('flipped')) {
+      const backDiv = c.querySelector('.back');
+      openedDigits.push(backDiv.textContent);
+    }
+  });
+  const sequence = winningNumber.split('');
+  let matchCount = 0;
+  for (let i=0; i<sequence.length; i++) {
+    if (openedDigits[i] === sequence[i]) {
+      matchCount++;
+    }
+  }
+
+  if (matchCount === sequence.length) {
+    const prize = (parseFloat(betInput.value) || 0) * 5;
+    resultDiv.innerHTML = `🎉 Поздравляем! Вы собрали ${winningNumber} и выиграли: ${prize} рублей! 🎉`;
+    rewardDiv.innerHTML = `Ваш выигрыш: ${prize} рублей!`;
+  } else {
+    resultDiv.innerHTML = `Победа не достигнута. Попробуйте снова!`;
+  }
+  showPlayAgainButton();
+
+  setTimeout(() => {
+    gameInProgress = false;
+  }, 1000);
+}
+
+function showPlayAgainButton() {
+  if (document.getElementById('playAgainBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'playAgainBtn';
+  btn.textContent = 'Сыграть еще раз';
+  btn.onclick = () => {
+    if (document.getElementById('playAgainBtn')) {
+      document.getElementById('playAgainBtn').remove();
+    }
+    gameInProgress = true;
+    showWinningNumber = false;
+    initGame();
+
+    // Воспроизвести ключевую музыку при новом запуске
+    if (soundReady) {
+      keySound.currentTime = 0;
+      keySound.play();
+    }
+  };
+  document.body.appendChild(btn);
+}
+</script>
+</body>
+</html>
